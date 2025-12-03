@@ -1,0 +1,142 @@
+ 
+#include <iostream>
+#include <cstdlib>
+#include <ctime>
+#include <climits>
+
+using namespace std;
+
+class SkipList {
+    struct Node {
+        int val;
+        int level;
+        Node** next;
+        Node(int v, int l) : val(v), level(l) {
+            next = new Node*[l + 1];
+            for (int i = 0; i <= l; i++) next[i] = nullptr;
+        }
+        ~Node() { delete[] next; }
+    };
+    
+    Node* head;
+    Node* tail;
+    int maxLevel;
+    int curLevel;
+    
+    int randomLevel() {
+        int lvl = 0;
+        while (rand() % 2 && lvl < maxLevel) lvl++;
+        return lvl;
+    }
+    
+public:
+    SkipList() {
+        srand(time(0));
+        maxLevel = 8;
+        curLevel = 0;
+        head = new Node(INT_MIN, maxLevel);
+        tail = new Node(INT_MAX, maxLevel);
+        for (int i = 0; i <= maxLevel; i++) head->next[i] = tail;
+    }
+    
+    ~SkipList() {
+        Node* cur = head->next[0];
+        while (cur != tail) {
+            Node* temp = cur;
+            cur = cur->next[0];
+            delete temp;
+        }
+        delete head;
+        delete tail;
+    }
+    
+    void insert(int x) {
+        Node* update[maxLevel + 1];
+        Node* cur = head;
+        
+        for (int i = curLevel; i >= 0; i--) {
+            while (cur->next[i]->val < x) cur = cur->next[i];
+            update[i] = cur;
+        }
+        
+        cur = cur->next[0];
+        if (cur->val == x) return;
+        
+        int newLevel = randomLevel();
+        if (newLevel > curLevel) {
+            for (int i = curLevel + 1; i <= newLevel; i++) update[i] = head;
+            curLevel = newLevel;
+        }
+        
+        Node* newNode = new Node(x, newLevel);
+        for (int i = 0; i <= newLevel; i++) {
+            newNode->next[i] = update[i]->next[i];
+            update[i]->next[i] = newNode;
+        }
+    }
+    
+    bool search(int x) {
+        Node* cur = head;
+        for (int i = curLevel; i >= 0; i--) {
+            while (cur->next[i]->val < x) cur = cur->next[i];
+        }
+        cur = cur->next[0];
+        return cur->val == x;
+    }
+    
+    bool remove(int x) {
+        Node* update[maxLevel + 1];
+        Node* cur = head;
+        
+        for (int i = curLevel; i >= 0; i--) {
+            while (cur->next[i]->val < x) cur = cur->next[i];
+            update[i] = cur;
+        }
+        
+        cur = cur->next[0];
+        if (cur->val != x) return false;
+        
+        for (int i = 0; i <= curLevel; i++) {
+            if (update[i]->next[i] != cur) break;
+            update[i]->next[i] = cur->next[i];
+        }
+        
+        delete cur;
+        while (curLevel > 0 && head->next[curLevel] == tail) curLevel--;
+        return true;
+    }
+    
+    void display() {
+        for (int i = curLevel; i >= 0; i--) {
+            cout << "L" << i << ": ";
+            Node* cur = head->next[i];
+            while (cur != tail) {
+                cout << cur->val << " ";
+                cur = cur->next[i];
+            }
+            cout << endl;
+        }
+    }
+};
+
+int main() {
+    SkipList s;
+    
+    s.insert(5);
+    s.insert(2);
+    s.insert(8);
+    s.insert(1);
+    s.insert(9);
+    
+    s.display();
+    
+    cout << "Search 8: " << s.search(8) << endl;
+    cout << "Search 3: " << s.search(3) << endl;
+    
+    s.remove(2);
+    s.remove(8);
+    
+    s.display();
+    
+    return 0;
+}
